@@ -31,5 +31,5 @@ A graphical Blackjack game built in Python using Pygame. This project uses clean
 Clone the repository:
 
 ```bash
-git clone https://github.com/tc661/pygame-blackjack.git
-cd pygame-blackjack
+git clone https://github.com/tc661/blackjack.git
+cd blackjack
