@@ -1,6 +1,8 @@
 import random
 import pygame
 import math
+from BasicStrategyBot import BasicStrategyBot, Hand as BotHand # Import the bot and its Hand class
+
 
 # ---INITIALIZING PYGAME---
 pygame.init()
@@ -180,11 +182,22 @@ class Hand:
     def score(self):
         total = sum(card.value for card in self.cards)
         # Adjust for Aces
-        aces = sum(1 for card in self.cards if card.rank == 'A')
-        while total > 21 and aces:
+        softaces = sum(1 for card in self.cards if card.rank == 'A')
+        while total > 21 and softaces:
             total -= 10
-            aces -= 1
+            softaces -= 1
         return total
+    
+    def soft(self):
+        total = sum(card.value for card in self.cards)
+        softaces = sum(1 for card in self.cards if card.rank == 'A')
+        while total > 21 and softaces:
+            total -= 10
+            softaces -= 1
+        soft = True if softaces else False
+        return soft
+    
+
     
     def update(self):
         # Update each card's position animation
@@ -208,8 +221,13 @@ class BlackjackGame:
         self.waiting_to_continue = False
         self.WIDTH, self.HEIGHT = screen.get_size()
         self.dealer_started = False
+        self.basic_strategy_bot = BasicStrategyBot()
         self.setup_positions()
         self.reset_round()
+
+    def get_bot_hand(self, hand):
+            total, soft = hand.score(), hand.soft()
+            return BotHand(total, soft)
 
     def setup_positions(self):
         self.WIDTH, self.HEIGHT = screen.get_size()
@@ -300,6 +318,48 @@ class BlackjackGame:
             pygame.time.set_timer(pygame.USEREVENT + 5, 0)  # Stop hitting
 
 
+    def display_bot_advice(self):
+        """
+        Calculates and displays the bot's recommended move and EVs in a box
+        in the top-right corner.
+        """
+        # We can't provide a recommendation if the player's hand isn't fully dealt
+        if len(self.player_hand.cards) < 2 or len(self.dealer_hand.cards) < 1:
+            return
+
+        # Convert game hands to bot hands
+        player_bot_hand = self.get_bot_hand(self.player_hand)
+        dealer_up_card = self.dealer_hand.cards[0]
+        dealer_bot_hand = BotHand(dealer_up_card.value, dealer_up_card.rank == 'A')
+
+        # Get the bot's decision
+        decision, hit_ev, stand_ev = self.basic_strategy_bot.analyse(player_bot_hand, dealer_bot_hand)
+        optimal_ev = max(hit_ev, stand_ev)
+
+        # Set box properties
+        box_width, box_height = 250, 150
+        box_x = self.WIDTH - box_width - 20
+        box_y = 20
+        box_rect = pygame.Rect(box_x, box_y, box_width, box_height)
+        
+        # Determine color based on EV
+        if optimal_ev > 0.3:
+            box_color = (0, 150, 0)  # Green
+        elif optimal_ev < -0.3:
+            box_color = (150, 0, 0) # Red
+        else:
+            box_color = (150, 150, 0) # Yellow
+
+        # Draw the box
+        pygame.draw.rect(screen, box_color, box_rect, border_radius=10)
+        pygame.draw.rect(screen, (255, 255, 255), box_rect, 3, border_radius=10)
+
+        # Draw the text
+        draw_text("Bot Recommendation", box_x + box_width // 2, box_y + 25, font=small_font)
+        draw_text(f"Decision: {decision.upper()}", box_x + box_width // 2, box_y + 60, font=small_font)
+        draw_text(f"Optimal EV: {optimal_ev:.3f}", box_x + box_width // 2, box_y + 95, font=small_font)
+
+
 
     # Draw the game state
     def draw(self):
@@ -366,6 +426,7 @@ class BlackjackGame:
             draw_text(result, self.WIDTH // 2, self.HEIGHT // 2 - 25, color=(255, 255, 0))
             draw_text("Press Enter to Continue...", self.WIDTH // 2, self.HEIGHT // 2 + 25, font=small_font)
     
+        self.display_bot_advice()
         pygame.display.flip()
 
     def show_reshuffle_screen(self):
