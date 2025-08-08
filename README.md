@@ -1,6 +1,6 @@
 # ♠️ Blackjack Game (Pygame)
 
-A graphical Blackjack game built in Python using Pygame. This project uses clean visuals, emoji-based card rendering, and dynamic resizing support.
+A graphical Blackjack game built in Python using Pygame. This project uses clean visuals, PNG card rendering, and dynamic resizing support.
 
 ## 🎮 Features
 
